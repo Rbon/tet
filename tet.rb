@@ -24,22 +24,38 @@ class Game
     begin
       @renderer.start
       @renderer.draw(@play_field)
+      @current_block = OBlock.new
+      update_grid
       while @running
-        spawn(OBlock.new)
         @renderer.draw(@play_field)
-        @game.act(@input.manage)
-        @running = false
+        act(@input.manage)
       end
     ensure
       @renderer.stop
     end
   end
 
-  def spawn(block)
-    block.data.each do |cell|
-      x_pos = cell[1][0] + block.pos[0]
-      y_pos = cell[1][1] + block.pos[1]
-      @play_field[x_pos][y_pos] = cell[0]
+  def act(input)
+    send(input) unless input == nil
+  end
+
+  def move_left
+    update_grid(0)
+    @current_block.pos[1] -= 1
+    update_grid
+  end
+
+  def move_right
+    update_grid(0)
+    @current_block.pos[1] += 1
+    update_grid
+  end
+
+  def update_grid(override = nil)
+    @current_block.data.each do |cell|
+      x_pos = cell[1][0] + @current_block.pos[0]
+      y_pos = cell[1][1] + @current_block.pos[1]
+      @play_field[x_pos][y_pos] = override || cell[0]
     end
   end
 end
@@ -51,7 +67,7 @@ end
 
 class OBlock < Block
   def initialize
-    @data = [[1, [0, 0]], [1, [0, 1]], [1, [0, 1]], [1, [1, 1]]]
+    @data = [[1, [0, 0]], [1, [0, 1]], [1, [1, 0]], [1, [1, 1]]]
     @pos = [5, 5]
   end
 end
@@ -60,8 +76,9 @@ class Input
   def initialize(opts)
     @source = opts[:source]
     @map = {
-      move_left: "h"
-    }
+      move_left: "h",
+      move_right: "l"
+    }.invert
   end
 
   def manage
@@ -74,10 +91,10 @@ class Renderer
     Curses.init_screen
     Curses.curs_set(0) # Invisible cursor
     Curses.noecho # Don't display pressed characters
-    @window = Curses::Window.new(22, 22, 0, 0)
+    @window = Curses::Window.new(42, 22, 0, 0)
     @window.box("|", "-")
     @window.keypad=(true)
-    @map = ["  ", "00"]
+    @map = ["  ", "OO"]
   end
 
   def stop
@@ -87,9 +104,11 @@ class Renderer
   def draw(grid)
     y_pos = 0
     grid.each do |row|
-      y_pos += 1
-      @window.setpos(y_pos, 1)
-      row.each { |cell| @window.addstr(@map[cell]) }
+      2.times do
+        y_pos += 1
+        @window.setpos(y_pos, 1)
+        row.each { |cell| @window.addstr(@map[cell]) }
+      end
     end
     @window.refresh
   end
