@@ -25,7 +25,7 @@ class Game
     begin
       @renderer.start
       @current_block = ZBlock.new(play_field: @play_field)
-      update_grid
+      @current_block.spawn
       @renderer.draw(@play_field)
       while @running
         key = @input.manage
@@ -48,37 +48,9 @@ class Game
   end
 
   def act(input)
-    send(input) unless input == nil
+    @current_block.send(input) unless input == nil
   end
 
-  def move_left
-    update_grid(0)
-    @current_block.pos[1] -= 1
-    @current_block.pos[1] += 1 if @current_block.oob?
-    update_grid
-  end
-
-  def move_right
-    update_grid(0)
-    @current_block.pos[1] += 1
-    @current_block.pos[1] -= 1 if @current_block.oob?
-    update_grid
-  end
-
-  def move_down
-    update_grid(0)
-    @current_block.pos[0] += 1
-    new_block if @current_block.at_rest?
-    update_grid
-  end
-
-  def update_grid(override = nil)
-    @current_block.data.each do |cell|
-      y_pos = cell[1][0] + @current_block.pos[0]
-      x_pos = cell[1][1] + @current_block.pos[1]
-      @play_field[y_pos][x_pos] = override || cell[0]
-    end
-  end
 
   def stop
     @running = false
@@ -91,6 +63,7 @@ class Block
 
   def initialize(opts)
     @play_field = opts[:play_field]
+    @data = []
   end
 
   def oob?
@@ -108,6 +81,39 @@ class Block
       x_pos = cell[0][1]
       return true if @play_field[y_pos][x_pos] != 0
     end
+  end
+
+  def move_left
+    update_grid(0)
+    @pos[1] -= 1
+    @pos[1] += 1 if oob?
+    update_grid
+  end
+
+  def move_right
+    update_grid(0)
+    @pos[1] += 1
+    @pos[1] -= 1 if oob?
+    update_grid
+  end
+
+  def move_down
+    update_grid(0)
+    @pos[0] += 1
+    new_block if at_rest?
+    update_grid
+  end
+
+  def update_grid(override = nil)
+    @data.each do |cell|
+      y_pos = cell[1][0] + @pos[0]
+      x_pos = cell[1][1] + @pos[1]
+      @play_field[y_pos][x_pos] = override || cell[0]
+    end
+  end
+
+  def spawn
+    update_grid
   end
 end
 
