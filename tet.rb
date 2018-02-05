@@ -24,16 +24,16 @@ class Game
   def run
     begin
       @renderer.start
-      @current_block = ZBlock.new
+      @current_block = ZBlock.new(play_field: @play_field)
       update_grid
       @renderer.draw(@play_field)
       while @running
         key = @input.manage
         act(key)
-        apply_gravity
+        # apply_gravity
         @renderer.draw(@play_field)
+        sleep(1/60)
       end
-      sleep(1/60)
     ensure
       @renderer.stop
     end
@@ -41,7 +41,7 @@ class Game
 
   def apply_gravity
     @g_num += 1
-    if @g_num == 60
+    if @g_num == 75
       move_down
       @g_num = 0
     end
@@ -53,26 +53,29 @@ class Game
 
   def move_left
     update_grid(0)
-    @current_block.pos[0] -= 1
+    @current_block.pos[1] -= 1
+    @current_block.pos[1] += 1 if @current_block.oob?
     update_grid
   end
 
   def move_right
     update_grid(0)
-    @current_block.pos[0] += 1
+    @current_block.pos[1] += 1
+    @current_block.pos[1] -= 1 if @current_block.oob?
     update_grid
   end
 
   def move_down
     update_grid(0)
-    @current_block.pos[1] += 1
+    @current_block.pos[0] += 1
+    new_block if @current_block.at_rest?
     update_grid
   end
 
   def update_grid(override = nil)
     @current_block.data.each do |cell|
-      x_pos = cell[1][0] + @current_block.pos[0]
-      y_pos = cell[1][1] + @current_block.pos[1]
+      y_pos = cell[1][0] + @current_block.pos[0]
+      x_pos = cell[1][1] + @current_block.pos[1]
       @play_field[y_pos][x_pos] = override || cell[0]
     end
   end
@@ -85,20 +88,46 @@ end
 class Block
   attr_reader :data
   attr_accessor :pos
+
+  def initialize(opts)
+    @play_field = opts[:play_field]
+  end
+
+  def oob?
+    @data.each do |cell|
+     return true if cell[1][1] + @pos[1] < 0
+     return true if cell[1][1] + @pos[1] > 9
+     # return true if cell[1][0] + @pos[0] > 19
+    end
+    return false
+  end
+
+  def at_rest?
+    @data.each do |cell|
+      y_pos = cell[0][0] + 1
+      x_pos = cell[0][1]
+      return true if @play_field[y_pos][x_pos] != 0
+    end
+  end
 end
 
 class OBlock < Block
-  def initialize
-    @data = [[1, [0, 0]], [1, [0, 1]], [1, [1, 0]], [1, [1, 1]]]
+  def initialize(opts)
+    super
+    @data = [
+      [1, [0, 0]], [1, [0, 1]],
+      [1, [1, 0]], [1, [1, 1]]
+    ]
     @pos = [5, 5]
   end
 end
 
 class ZBlock < Block
-  def initialize
+  def initialize(opts)
+    super
     @data = [
-      [1, [0, 0]], [1, [1, 0]], [0, [2, 0]],
-      [0, [0, 1]], [1, [1, 1]], [1, [2, 1]]
+      [7, [0, 0]], [7, [0, 1]], [0, [0, 2]],
+      [0, [1, 0]], [7, [1, 1]], [7, [1, 2]]
     ]
     @pos = [5, 5]
   end
@@ -110,6 +139,7 @@ class Input
     @map = {
       move_left: "h",
       move_right: "l",
+      move_down: "j",
       stop: "q"
     }.invert
   end
@@ -128,7 +158,7 @@ class Renderer
     @window.box("|", "-")
     @window.keypad = true
     @window.timeout = 10
-    @map = ["  ", "OO"]
+    @map = ["  ", "II", "LL", "OO", "RR", "SS", "TT", "ZZ"]
     @dev_window = Curses::Window.new(30, 30, 0, 30)
     @dev_window.setpos(1, 1)
   end
