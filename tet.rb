@@ -19,24 +19,33 @@ class Game
     @input = opts[:input]
     @running = true
     @g_num = 0
+    @block_list = [IBlock, OBlock, ZBlock]
   end
 
   def run
     begin
       @renderer.start
-      @current_block = ZBlock.new(play_field: @play_field)
+      @current_block = new_block
       @current_block.spawn
       @renderer.draw(@play_field)
       while @running
+        if @current_block.at_rest?
+          @current_block = new_block
+          @current_block.spawn
+        end
         key = @input.manage
         act(key)
-        # apply_gravity
+        apply_gravity
         @renderer.draw(@play_field)
         sleep(1/60)
       end
     ensure
       @renderer.stop
     end
+  end
+
+  def new_block
+    @block_list.sample.new(play_field: @play_field)
   end
 
   def apply_gravity
@@ -74,7 +83,8 @@ class Block
 
   def initialize(opts)
     @play_field = opts[:play_field]
-    @data = []
+    @data = [5, 5]
+    @rest = false
   end
 
   def oob?
@@ -87,7 +97,11 @@ class Block
   end
 
   def at_rest?
-    @data[0][1]
+    @rest
+  end
+
+  def check_collision(direction)
+
   end
 
   def move_left
@@ -101,6 +115,7 @@ class Block
     update_grid(override: 0)
     @pos[1] += 1
     @pos[1] -= 1 if oob?
+    # check_collision(:right)
     update_grid
   end
 
@@ -110,11 +125,15 @@ class Block
       x_pos = cell[0][1]
       if @play_field[y_pos][x_pos][1]
         update_grid(at_rest: true)
+        @rest = true
       end
     end
     update_grid(override: 0)
     @pos[0] += 1
-    @pos[0] -= 1 if oob?
+    if oob?
+      @pos[0] -= 1
+      @rest = true
+    end
     update_grid
   end
 
@@ -131,12 +150,36 @@ class Block
   end
 end
 
+class IBlock < Block
+  def initialize(opts)
+    super
+    @data = [
+      [1, [0, 0]],
+      [1, [1, 0]],
+      [1, [2, 0]],
+      [1, [3, 0]]
+    ]
+    @pos = [5, 5]
+  end
+end
+
+# class LBlock < Block
+  # def initialize(opts)
+    # super
+    # @data = [
+      # [2, [0, 0]],
+      # [2, [1, 0]],
+      # [2, [2, 0]], [2, [2, 1]]
+    # ]
+  # end
+# end
+
 class OBlock < Block
   def initialize(opts)
     super
     @data = [
-      [1, [0, 0]], [1, [0, 1]],
-      [1, [1, 0]], [1, [1, 1]]
+      [3, [0, 0]], [3, [0, 1]],
+      [3, [1, 0]], [3, [1, 1]]
     ]
     @pos = [5, 5]
   end
@@ -178,7 +221,7 @@ class Renderer
     @window.box("|", "-")
     @window.keypad = true
     @window.timeout = 10
-    @map = ["  ", "II", "LL", "OO", "RR", "SS", "TT", "ZZ"]
+    @map = ["  ", "II", "LL", "OO", "JJ", "SS", "TT", "ZZ"]
     @dev_window = Curses::Window.new(30, 30, 0, 30)
     @dev_window.setpos(1, 1)
   end
