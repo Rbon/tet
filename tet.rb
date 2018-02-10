@@ -29,7 +29,7 @@ class Game
       @current_block.spawn
       @renderer.draw(@play_field)
       while @running
-        if @current_block.at_rest?
+        if @current_block.resting?
           @current_block = new_block
           @current_block.spawn
         end
@@ -81,13 +81,7 @@ class Cell
   attr_reader :type
 
   def initialize(opts)
-    @type = opts[:type]
     @pos = opts[:pos]
-    @resting = false
-  end
-
-  def resting?
-    @resting
   end
 
   def [](index)
@@ -105,20 +99,11 @@ class Block
 
   def initialize(opts)
     @play_field = opts[:play_field]
-    @rest = false
+    @resting = false
   end
 
-  def oob?
-    @data.each do |cell|
-     return true if cell[1][1] + @pos[1] < 0
-     return true if cell[1][1] + @pos[1] > 9
-     return true if cell[1][0] + @pos[0] > 19
-    end
-    return false
-  end
-
-  def at_rest?
-    @rest
+  def resting?
+    @resting
   end
 
   def collision?
@@ -143,24 +128,6 @@ class Block
     @data.each { |cell| cell[1] -= 1 } if collision?
     update_grid
   end
-
-  # def move_down
-    # @data.each do |cell|
-      # y_pos = cell[0][0] + 1
-      # x_pos = cell[0][1]
-      # if @play_field[y_pos][x_pos][1]
-        # update_grid(at_rest: true)
-        # @rest = true
-      # end
-    # end
-    # update_grid(override: [:empty, false])
-    # @pos[0] += 1
-    # if oob?
-      # @pos[0] -= 1
-      # @rest = true
-    # end
-    # update_grid
-  # end
 
   def move_down
     update_grid(type: :empty)
