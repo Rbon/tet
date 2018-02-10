@@ -14,7 +14,7 @@ end
 
 class Game
   def initialize(opts)
-    @play_field = Array.new(20) { Array.new(10) { [0, false] } }
+    @play_field = Array.new(20) { Array.new(10) { [:empty, false] } }
     @renderer = opts[:renderer]
     @input = opts[:input]
     @running = true
@@ -77,13 +77,30 @@ class Game
   end
 end
 
+class Cell
+  attr_reader :type
+
+  def initialize(opts)
+    @type = opts[:type]
+    @pos = opts[:pos]
+    @resting = false
+  end
+
+  def resting?
+    @resting
+  end
+
+  def [](index)
+    @pos[index]
+  end
+end
+
 class Block
   attr_reader :data
   attr_accessor :pos
 
   def initialize(opts)
     @play_field = opts[:play_field]
-    @data = [5, 5]
     @rest = false
   end
 
@@ -141,7 +158,7 @@ class Block
     @data.each do |cell|
       y_pos = cell[1][0] + @pos[0]
       x_pos = cell[1][1] + @pos[1]
-      @play_field[y_pos][x_pos] = override || [cell[0], at_rest]
+      @play_field[y_pos][x_pos] = override || [@type, @resting]
     end
   end
 
@@ -153,12 +170,13 @@ end
 class IBlock < Block
   def initialize(opts)
     super
+    @type = :i_block
     @data = [
-      [1, [0, 0]],
-      [1, [1, 0]],
-      [1, [2, 0]],
-      [1, [3, 0]]
-    ]
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [3, 0]
+    ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
 end
@@ -178,9 +196,9 @@ class OBlock < Block
   def initialize(opts)
     super
     @data = [
-      [3, [0, 0]], [3, [0, 1]],
-      [3, [1, 0]], [3, [1, 1]]
-    ]
+      [0, 0], [0, 1],
+      [1, 0], [1, 1]
+    ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
 end
@@ -189,9 +207,9 @@ class ZBlock < Block
   def initialize(opts)
     super
     @data = [
-      [7, [0, 0]], [7, [0, 1]], [0, [0, 2]],
-      [0, [1, 0]], [7, [1, 1]], [7, [1, 2]]
-    ]
+      [0, 0], [0, 1], [0, 2],
+      [1, 0], [1, 1], [1, 2]
+    ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
 end
@@ -221,9 +239,18 @@ class Renderer
     @window.box("|", "-")
     @window.keypad = true
     @window.timeout = 10
-    @map = ["  ", "II", "LL", "OO", "JJ", "SS", "TT", "ZZ"]
     @dev_window = Curses::Window.new(30, 30, 0, 30)
     @dev_window.setpos(1, 1)
+    @type_map = {
+      empty: "  ",
+      i_block: "II",
+      l_block: "LL",
+      o_block: "OO",
+      j_block: "JJ",
+      s_block: "SS",
+      t_block: "TT",
+      z_block: "ZZ"
+    }
   end
 
   def stop
@@ -238,7 +265,7 @@ class Renderer
         y_pos += 1
         @window.setpos(y_pos, 1)
         row.each do |cell|
-          @window.addstr(@map[cell[0]])
+          @window.addstr(@type_map[cell[0]])
         end
       end
     end
