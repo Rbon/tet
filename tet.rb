@@ -20,21 +20,16 @@ class Game
     @running = true
     @g_num = 0
     @block_list = [IBlock, OBlock, ZBlock]
+    @flags = [:new_block]
   end
 
   def run
     begin
       @renderer.start
-      @current_block = new_block
-      @current_block.spawn
       @renderer.draw(@play_field)
       while @running
-        if @current_block.resting?
-          @current_block = new_block
-          @current_block.spawn
-        end
-        key = @input.manage
-        act(key)
+        handle_flags
+        act(@input.manage)
         apply_gravity
         @renderer.draw(@play_field)
         sleep(1/60)
@@ -44,8 +39,17 @@ class Game
     end
   end
 
+  def handle_flags
+    @flags.each { |flag| send(flag) }
+    @flags.clear
+  end
+
   def new_block
-    @block_list.sample.new(play_field: @play_field)
+    @current_block = @block_list.sample.new(
+      play_field: @play_field,
+      flags: @flags
+    )
+    @current_block.spawn
   end
 
   def apply_gravity
@@ -78,8 +82,6 @@ class Game
 end
 
 class Cell
-  attr_reader :type
-
   def initialize(opts)
     @pos = opts[:pos]
   end
@@ -99,6 +101,7 @@ class Block
 
   def initialize(opts)
     @play_field = opts[:play_field]
+    @flags = opts[:flags]
     @resting = false
   end
 
@@ -135,6 +138,7 @@ class Block
     if collision?
       @data.each { |cell| cell[0] -= 1 }
       @resting = true
+      @flags << :new_block
     end
     update_grid
   end
@@ -190,8 +194,8 @@ class ZBlock < Block
     super
     @type = :z_block
     @data = [
-              [5, 6], [5, 7],
-      [6, 5], [6, 6]
+      [5, 5], [5, 6],
+              [6, 6], [6, 7]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
@@ -222,8 +226,6 @@ class Renderer
     @window.box("|", "-")
     @window.keypad = true
     @window.timeout = 10
-    @dev_window = Curses::Window.new(30, 30, 0, 30)
-    @dev_window.setpos(1, 1)
     @type_map = {
       empty: "  ",
       i_block: "II",
@@ -255,14 +257,26 @@ class Renderer
     @window.refresh
   end
 
-  def dev_draw(output)
-    @dev_window.addstr(output.to_s + "\n")
-    @dev_window.refresh
-  end
-
   def input
     @window.getch
   end
 end
 
+class Debug
+  def initialize
+    @window = Curses::Window.new(30, 30, 0, 30)
+    @window.setpos(0, 0)
+  end
+
+  def draw(output)
+    @window.addstr(output.to_s + "\n")
+    @window.refresh
+  end
+
+  def reset_pos
+    @window.setpos(0, 0)
+  end
+end
+
+$debug = Debug.new
 Main.new.run
