@@ -55,7 +55,7 @@ class Game
   def apply_gravity
     @g_num += 1
     if @g_num == 75
-      @current_block.move_down
+      @current_block.move(:down)
       @g_num = 0
     end
   end
@@ -65,15 +65,15 @@ class Game
   end
 
   def move_left
-    @current_block.move_left
+    @current_block.move(:left)
   end
 
   def move_right
-    @current_block.move_right
+    @current_block.move(:right)
   end
 
   def move_down
-    @current_block.move_down
+    @current_block.move(:down)
   end
 
   def stop
@@ -96,9 +96,6 @@ class Cell
 end
 
 class Block
-  attr_reader :data
-  attr_accessor :pos
-
   def initialize(opts)
     @play_field = opts[:play_field]
     @flags = opts[:flags]
@@ -118,28 +115,12 @@ class Block
     return false
   end
 
-  def move_left
+  def move(direction)
+    directions = {left: [1, -1], right: [1, 1], down: [0, 1]}
+    axis, delta = directions[direction]
     update_grid(type: :empty)
-    @data.each { |cell| cell[1] -= 1 }
-    @data.each { |cell| cell[1] += 1 } if collision?
-    update_grid
-  end
-
-  def move_right
-    update_grid(type: :empty)
-    @data.each { |cell| cell[1] += 1 }
-    @data.each { |cell| cell[1] -= 1 } if collision?
-    update_grid
-  end
-
-  def move_down
-    update_grid(type: :empty)
-    @data.each { |cell| cell[0] += 1 }
-    if collision?
-      @data.each { |cell| cell[0] -= 1 }
-      @resting = true
-      @flags << :new_block
-    end
+    @data.each { |cell| cell[axis] += delta }
+    @data.each { |cell| cell[axis] -= delta } if collision?
     update_grid
   end
 
