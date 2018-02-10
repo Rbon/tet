@@ -93,6 +93,10 @@ class Cell
   def [](index)
     @pos[index]
   end
+
+  def []=(index, value)
+    @pos[index] = value
+  end
 end
 
 class Block
@@ -117,7 +121,7 @@ class Block
     @rest
   end
 
-  def check_collision(direction)
+  def check_collision
 
   end
 
@@ -145,12 +149,18 @@ class Block
         @rest = true
       end
     end
-    update_grid(override: 0)
+    update_grid(override: [:empty, false])
     @pos[0] += 1
     if oob?
       @pos[0] -= 1
       @rest = true
     end
+    update_grid
+  end
+
+  def move_down
+    @data.each { |cell| cell[0] += 1 }
+    check_collision
     update_grid
   end
 
@@ -160,6 +170,10 @@ class Block
       x_pos = cell[1][1] + @pos[1]
       @play_field[y_pos][x_pos] = override || [@type, @resting]
     end
+  end
+
+  def update_grid(type: @type, resting: @resting)
+    @data.each { |cell| @play_field[cell[0]][cell[1]] = [type, resting]}
   end
 
   def spawn
@@ -172,10 +186,10 @@ class IBlock < Block
     super
     @type = :i_block
     @data = [
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [3, 0]
+      [5, 5],
+      [6, 5],
+      [7, 5],
+      [8, 5]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
@@ -195,9 +209,10 @@ end
 class OBlock < Block
   def initialize(opts)
     super
+    @type = :o_block
     @data = [
-      [0, 0], [0, 1],
-      [1, 0], [1, 1]
+      [5, 5], [5, 6],
+      [6, 5], [6, 6]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
@@ -206,9 +221,10 @@ end
 class ZBlock < Block
   def initialize(opts)
     super
+    @type = :z_block
     @data = [
-      [0, 0], [0, 1], [0, 2],
-      [1, 0], [1, 1], [1, 2]
+              [5, 6], [5, 7],
+      [6, 5], [6, 6]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
     @pos = [5, 5]
   end
