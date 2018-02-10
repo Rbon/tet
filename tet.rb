@@ -4,7 +4,13 @@ class Main
   def initialize
     renderer = Renderer.new
     input = Input.new(source: renderer)
-    @game = Game.new(renderer: renderer, input: input)
+    actions = {
+      move_down: BlockActions::MoveDown.new,
+      move_left: BlockActions::MoveLeft.new,
+      move_right: BlockActions::MoveRight.new,
+      spawn: BlockActions::Spawn.new
+    }
+    @game = Game.new(renderer: renderer, input: input, actions: actions)
   end
 
   def run
@@ -21,6 +27,8 @@ class Game
     @g_num = 0
     @block_list = [IBlock, OBlock, ZBlock]
     @flags = [:new_block]
+    @actions = opts[:actions]
+    @state = {play_field: @play_field, flags: @flags, running: @running}
   end
 
   def run
@@ -45,39 +53,21 @@ class Game
   end
 
   def new_block
-    @current_block = @block_list.sample.new(
-      play_field: @play_field,
-      flags: @flags
-    )
-    @current_block.spawn
+    current_block = @block_list.sample.new
+    @state[:data] = current_block.data
+    @state[:type] = current_block.type
   end
 
   def apply_gravity
     @g_num += 1
     if @g_num == 75
-      @current_block.move(:down)
+      act(:move_down)
       @g_num = 0
     end
   end
 
   def act(input)
-    send(input) unless input == nil
-  end
-
-  def move_left
-    @current_block.move(:left)
-  end
-
-  def move_right
-    @current_block.move(:right)
-  end
-
-  def move_down
-    @current_block.move(:down)
-  end
-
-  def stop
-    @running = false
+    @actions[input].act(@state) unless input == nil
   end
 end
 
@@ -95,47 +85,77 @@ class Cell
   end
 end
 
-class Block
-  def initialize(opts)
-    @play_field = opts[:play_field]
-    @flags = opts[:flags]
-    @resting = false
-  end
-
-  def resting?
-    @resting
-  end
-
-  def collision?
-    @data.each do |cell|
-     return true if cell[1] < 0
-     return true if cell[1] > 9
-     return true if cell[0] > 19
+module BlockActions
+  class Action
+    def update_grid(state)
+      state[:data].each { |cell| state[:play_field][cell[0]][cell[1]] = [state[:type], false]}
     end
-    return false
+
+    def collision?(state)
+      state[:data].each do |cell|
+       return true if cell[1] < 0
+       return true if cell[1] > 9
+      end
+      return false
+    end
   end
 
-  def move(direction)
-    directions = {left: [1, -1], right: [1, 1], down: [0, 1]}
-    axis, delta = directions[direction]
-    update_grid(type: :empty)
-    @data.each { |cell| cell[axis] += delta }
-    @data.each { |cell| cell[axis] -= delta } if collision?
-    update_grid
+  class MoveDown < Action
+    def act(state)
+      prev_type = state[:type]
+      state[:type] = :empty
+      update_grid(state)
+      state[:data].each { |cell| cell[0] += 1 }
+      if collision?(state)
+        state[:data].each { |cell| cell[0] -= 1 }
+        state[:flags] << :new_block
+      end
+      state[:type] = prev_type
+      update_grid(state)
+    end
   end
 
-  def update_grid(type: @type, resting: @resting)
-    @data.each { |cell| @play_field[cell[0]][cell[1]] = [type, resting]}
+  class MoveLeft < Action
+    def act(state)
+      prev_type = state[:type]
+      state[:type] = :empty
+      update_grid(state)
+      state[:data].each { |cell| cell[1] -= 1 }
+      state[:data].each { |cell| cell[1] += 1 } if collision?(state)
+      state[:type] = prev_type
+      update_grid(state)
+    end
   end
 
-  def spawn
-    update_grid
+  class MoveRight < Action
+    def act(state)
+      prev_type = state[:type]
+      state[:type] = :empty
+      update_grid(state)
+      state[:data].each { |cell| cell[1] += 1 }
+      state[:data].each { |cell| cell[1] -= 1 } if collision?(state)
+      state[:type] = prev_type
+      update_grid(state)
+    end
+  end
+
+  class Spawn < Action
+    def act(state)
+      update_grid(state)
+    end
+  end
+
+  class Stop
+    def act(state)
+      state[:running] = false
+    end
   end
 end
 
-class IBlock < Block
-  def initialize(opts)
-    super
+class IBlock
+  attr_reader :type, :data
+
+  def initialize
     @type = :i_block
     @data = [
       [5, 5],
@@ -143,7 +163,6 @@ class IBlock < Block
       [7, 5],
       [8, 5]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
-    @pos = [5, 5]
   end
 end
 
@@ -158,27 +177,27 @@ end
   # end
 # end
 
-class OBlock < Block
-  def initialize(opts)
-    super
+class OBlock
+  attr_reader :type, :data
+
+  def initialize
     @type = :o_block
     @data = [
       [5, 5], [5, 6],
       [6, 5], [6, 6]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
-    @pos = [5, 5]
   end
 end
 
-class ZBlock < Block
-  def initialize(opts)
-    super
+class ZBlock
+  attr_reader :type, :data
+
+  def initialize
     @type = :z_block
     @data = [
       [5, 5], [5, 6],
               [6, 6], [6, 7]
     ].map { |pos| Cell.new(pos: pos, type: @type) }
-    @pos = [5, 5]
   end
 end
 
