@@ -2,17 +2,15 @@ require 'curses'
 
 class Main
   def initialize
-    state = State.new
     renderer = Renderer.new
-    input = Input.new(source: renderer)
-    actions = {
-      move_down: Actions::MoveDown.new,
-      move_left: Actions::MoveLeft.new,
-      move_right: Actions::MoveRight.new,
-      stop: Actions::Stop.new
-    }
     @game = Game.new(
-      renderer: renderer, input: input, actions: actions, state: state
+      renderer: renderer, input: Input.new(source: renderer), state: State.new,
+      block_list: [Blocks::IBlock, Blocks::OBlock, Blocks::ZBlock],
+      play_field: Array.new(20) { Array.new(10) { :empty } },
+      actions: {
+        move_down: Actions::MoveDown.new, move_left: Actions::MoveLeft.new,
+        move_right: Actions::MoveRight.new, stop: Actions::Stop.new
+      }
     )
   end
 
@@ -26,10 +24,10 @@ class Game
     @renderer = opts[:renderer]
     @input = opts[:input]
     @g_num = 0
-    @block_list = [Blocks::IBlock, Blocks::OBlock, Blocks::ZBlock]
+    @block_list = opts[:block_list]
     @actions = opts[:actions]
     @state = opts[:state]
-    @state.play_field = Array.new(20) { Array.new(10) { :empty } }
+    @state.play_field = opts[:play_field]
     @state.running = true
     @state.flags = [:new_block]
   end
