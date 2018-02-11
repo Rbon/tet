@@ -2,15 +2,19 @@ require 'curses'
 
 class Main
   def initialize
+    state = State.new
     renderer = Renderer.new
     input = Input.new(source: renderer)
     actions = {
-      move_down: BlockActions::MoveDown.new,
-      move_left: BlockActions::MoveLeft.new,
-      move_right: BlockActions::MoveRight.new,
-      spawn: BlockActions::Spawn.new
+      move_down: Actions::MoveDown.new,
+      move_left: Actions::MoveLeft.new,
+      move_right: Actions::MoveRight.new,
+      spawn: Actions::Spawn.new,
+      stop: Actions::Stop.new
     }
-    @game = Game.new(renderer: renderer, input: input, actions: actions)
+    @game = Game.new(
+      renderer: renderer, input: input, actions: actions, state: state
+    )
   end
 
   def run
@@ -20,26 +24,26 @@ end
 
 class Game
   def initialize(opts)
-    @play_field = Array.new(20) { Array.new(10) { [:empty, false] } }
     @renderer = opts[:renderer]
     @input = opts[:input]
-    @running = true
     @g_num = 0
     @block_list = [IBlock, OBlock, ZBlock]
-    @flags = [:new_block]
     @actions = opts[:actions]
-    @state = {play_field: @play_field, flags: @flags, running: @running}
+    @state = opts[:state]
+    @state.play_field = Array.new(20) { Array.new(10) { [:empty, false] } }
+    @state.running = true
+    @state.flags = [:new_block]
   end
 
   def run
     begin
       @renderer.start
-      @renderer.draw(@play_field)
-      while @running
+      @renderer.draw(@state.play_field)
+      while @state.running
         handle_flags
         act(@input.manage)
         apply_gravity
-        @renderer.draw(@play_field)
+        @renderer.draw(@state.play_field)
         sleep(1/60)
       end
     ensure
@@ -48,14 +52,13 @@ class Game
   end
 
   def handle_flags
-    @flags.each { |flag| send(flag) }
-    @flags.clear
+    @state.flags.each { |flag| send(flag) }
+    @state.flags.clear
   end
 
   def new_block
-    current_block = @block_list.sample.new
-    @state[:data] = current_block.data
-    @state[:type] = current_block.type
+    @state.block = @block_list.sample.new
+    act(:spawn)
   end
 
   def apply_gravity
@@ -68,6 +71,17 @@ class Game
 
   def act(input)
     @actions[input].act(@state) unless input == nil
+  end
+end
+
+class State
+  attr_accessor :running, :flags, :block, :play_field
+
+  def initialize
+    @running = nil
+    @flags = nil
+    @block = nil
+    @play_field = nil
   end
 end
 
@@ -85,16 +99,17 @@ class Cell
   end
 end
 
-module BlockActions
+module Actions
   class Action
-    def update_grid(state)
-      state[:data].each { |cell| state[:play_field][cell[0]][cell[1]] = [state[:type], false]}
+    def update_grid(state, type)
+      state.block.data.each { |cell| state.play_field[cell[0]][cell[1]] = [type, false]}
     end
 
     def collision?(state)
-      state[:data].each do |cell|
+      state.block.data.each do |cell|
        return true if cell[1] < 0
        return true if cell[1] > 9
+       return true if cell[0] > 19
       end
       return false
     end
@@ -102,52 +117,43 @@ module BlockActions
 
   class MoveDown < Action
     def act(state)
-      prev_type = state[:type]
-      state[:type] = :empty
-      update_grid(state)
-      state[:data].each { |cell| cell[0] += 1 }
+      update_grid(state, :empty)
+      state.block.data.each { |cell| cell[0] += 1 }
       if collision?(state)
-        state[:data].each { |cell| cell[0] -= 1 }
-        state[:flags] << :new_block
+        state.block.data.each { |cell| cell[0] -= 1 }
+        state.flags << :new_block
       end
-      state[:type] = prev_type
-      update_grid(state)
+      update_grid(state, state.block.type)
     end
   end
 
   class MoveLeft < Action
     def act(state)
-      prev_type = state[:type]
-      state[:type] = :empty
-      update_grid(state)
-      state[:data].each { |cell| cell[1] -= 1 }
-      state[:data].each { |cell| cell[1] += 1 } if collision?(state)
-      state[:type] = prev_type
-      update_grid(state)
+      update_grid(state, :empty)
+      state.block.data.each { |cell| cell[1] -= 1 }
+      state.block.data.each { |cell| cell[1] += 1 } if collision?(state)
+      update_grid(state, state.block.type)
     end
   end
 
   class MoveRight < Action
     def act(state)
-      prev_type = state[:type]
-      state[:type] = :empty
-      update_grid(state)
-      state[:data].each { |cell| cell[1] += 1 }
-      state[:data].each { |cell| cell[1] -= 1 } if collision?(state)
-      state[:type] = prev_type
-      update_grid(state)
+      update_grid(state, :empty)
+      state.block.data.each { |cell| cell[1] += 1 }
+      state.block.data.each { |cell| cell[1] -= 1 } if collision?(state)
+      update_grid(state, state.block.type)
     end
   end
 
   class Spawn < Action
     def act(state)
-      update_grid(state)
+      update_grid(state, state.block.type)
     end
   end
 
   class Stop
     def act(state)
-      state[:running] = false
+      state.running = false
     end
   end
 end
