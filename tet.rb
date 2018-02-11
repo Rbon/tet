@@ -39,16 +39,18 @@ class Game
     begin
       @renderer.start
       @renderer.draw(@state.play_field)
-      while @state.running
-        handle_flags
-        act(@input.manage)
-        apply_gravity
-        @renderer.draw(@state.play_field)
-        sleep(1/60)
-      end
+      tick while @state.running
     ensure
       @renderer.stop
     end
+  end
+
+  def tick
+    handle_flags
+    act(@input.manage)
+    apply_gravity
+    @renderer.draw(@state.play_field)
+    sleep(1/60)
   end
 
   def handle_flags
