@@ -26,7 +26,7 @@ class Game
     @renderer = opts[:renderer]
     @input = opts[:input]
     @g_num = 0
-    @block_list = [IBlock, OBlock, ZBlock]
+    @block_list = [Blocks::IBlock, Blocks::OBlock, Blocks::ZBlock]
     @actions = opts[:actions]
     @state = opts[:state]
     @state.play_field = Array.new(20) { Array.new(10) { :empty } }
@@ -143,52 +143,54 @@ module Actions
   end
 end
 
-class IBlock
-  attr_reader :type, :data
+module Blocks
+  class IBlock
+    attr_reader :type, :data
 
-  def initialize
-    @type = :i_block
-    @data = [
-      [5, 5],
-      [6, 5],
-      [7, 5],
-      [8, 5]
-    ]
+    def initialize
+      @type = :i_block
+      @data = [
+        [5, 5],
+        [6, 5],
+        [7, 5],
+        [8, 5]
+      ]
+    end
   end
-end
 
-# class LBlock < Block
-  # def initialize(opts)
-    # super
-    # @data = [
-      # [2, [0, 0]],
-      # [2, [1, 0]],
-      # [2, [2, 0]], [2, [2, 1]]
-    # ]
+  # class LBlock < Block
+    # def initialize(opts)
+      # super
+      # @data = [
+        # [2, [0, 0]],
+        # [2, [1, 0]],
+        # [2, [2, 0]], [2, [2, 1]]
+      # ]
+    # end
   # end
-# end
 
-class OBlock
-  attr_reader :type, :data
+  class OBlock
+    attr_reader :type, :data
 
-  def initialize
-    @type = :o_block
-    @data = [
-      [5, 5], [5, 6],
-      [6, 5], [6, 6]
-    ]
+    def initialize
+      @type = :o_block
+      @data = [
+        [5, 5], [5, 6],
+        [6, 5], [6, 6]
+      ]
+    end
   end
-end
 
-class ZBlock
-  attr_reader :type, :data
+  class ZBlock
+    attr_reader :type, :data
 
-  def initialize
-    @type = :z_block
-    @data = [
-      [5, 5], [5, 6],
-              [6, 6], [6, 7]
-    ]
+    def initialize
+      @type = :z_block
+      @data = [
+        [5, 5], [5, 6],
+                [6, 6], [6, 7]
+      ]
+    end
   end
 end
 
