@@ -9,7 +9,6 @@ class Main
       move_down: Actions::MoveDown.new,
       move_left: Actions::MoveLeft.new,
       move_right: Actions::MoveRight.new,
-      spawn: Actions::Spawn.new,
       stop: Actions::Stop.new
     }
     @game = Game.new(
@@ -60,7 +59,7 @@ class Game
 
   def new_block
     @state.block = @block_list.sample.new
-    act(:spawn)
+    @state.update_grid
   end
 
   def apply_gravity
@@ -85,59 +84,57 @@ class State
     @block = nil
     @play_field = nil
   end
+
+  def update_grid(type = @block.type)
+    @block.data.each { |cell| @play_field[cell[0]][cell[1]] = type}
+  end
+
+  def check_collision
+    @block.data.each do |cell|
+     return true if cell[1] < 0
+     return true if cell[1] > 9
+     return true if cell[0] > 19
+    end
+    return false
+  end
 end
 
 module Actions
   class Action
-    def update_grid(state, type)
-      state.block.data.each { |cell| state.play_field[cell[0]][cell[1]] = type}
-    end
-
-    def collision?(state)
-      state.block.data.each do |cell|
-       return true if cell[1] < 0
-       return true if cell[1] > 9
-       return true if cell[0] > 19
-      end
-      return false
+    def initialize
+      @collision = false
     end
   end
 
-  class MoveDown < Action
+  class Move < Action
+    def move(state, axis, delta)
+      state.update_grid(:empty)
+      state.block.data.each { |cell| cell[axis] += delta }
+      @collision = state.check_collision
+      state.block.data.each { |cell| cell[axis] -= delta } if @collision
+      state.update_grid
+    end
+  end
+
+  class MoveDown < Move
     def act(state)
-      update_grid(state, :empty)
-      state.block.data.each { |cell| cell[0] += 1 }
-      if collision?(state)
-        state.block.data.each { |cell| cell[0] -= 1 }
-        state.flags << :new_block
-      end
-      update_grid(state, state.block.type)
+      move(state, 0, 1)
+      state.flags << :new_block if @collision
     end
   end
 
-  class MoveLeft < Action
+  class MoveLeft < Move
     def act(state)
-      update_grid(state, :empty)
-      state.block.data.each { |cell| cell[1] -= 1 }
-      state.block.data.each { |cell| cell[1] += 1 } if collision?(state)
-      update_grid(state, state.block.type)
+      move(state, 1, -1)
     end
   end
 
-  class MoveRight < Action
+  class MoveRight < Move
     def act(state)
-      update_grid(state, :empty)
-      state.block.data.each { |cell| cell[1] += 1 }
-      state.block.data.each { |cell| cell[1] -= 1 } if collision?(state)
-      update_grid(state, state.block.type)
+     move(state, 1, 1)
     end
   end
 
-  class Spawn < Action
-    def act(state)
-      update_grid(state, state.block.type)
-    end
-  end
 
   class Stop
     def act(state)
