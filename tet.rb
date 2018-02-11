@@ -5,7 +5,10 @@ class Main
     renderer = Renderer.new
     @game = Game.new(
       renderer: renderer, input: Input.new(source: renderer), state: State.new,
-      block_list: [Blocks::IBlock, Blocks::OBlock, Blocks::ZBlock],
+      block_list: [
+        Blocks::IBlock, Blocks::OBlock, Blocks::ZBlock, Blocks::LBlock,
+        Blocks::SBlock, Blocks::JBlock, Blocks::TBlock
+      ],
       play_field: Array.new(20) { Array.new(10) { :empty } },
       actions: {
         move_down: Actions::MoveDown.new, move_left: Actions::MoveLeft.new,
@@ -143,9 +146,11 @@ module Actions
 end
 
 module Blocks
-  class IBlock
+  class Block
     attr_reader :type, :data
+  end
 
+  class IBlock < Block
     def initialize
       @type = :i_block
       @data = [
@@ -157,20 +162,29 @@ module Blocks
     end
   end
 
-  # class LBlock < Block
-    # def initialize(opts)
-      # super
-      # @data = [
-        # [2, [0, 0]],
-        # [2, [1, 0]],
-        # [2, [2, 0]], [2, [2, 1]]
-      # ]
-    # end
-  # end
+  class LBlock < Block
+    def initialize
+      @type = :l_block
+      @data = [
+        [5, 5],
+        [6, 5],
+        [7, 5], [7, 6]
+      ]
+    end
+  end
 
-  class OBlock
-    attr_reader :type, :data
+  class JBlock < Block
+    def initialize
+      @type = :j_block
+      @data = [
+                [5, 6],
+                [6, 6],
+        [7, 5], [7, 6]
+      ]
+    end
+  end
 
+  class OBlock < Block
     def initialize
       @type = :o_block
       @data = [
@@ -180,14 +194,32 @@ module Blocks
     end
   end
 
-  class ZBlock
-    attr_reader :type, :data
-
+  class ZBlock < Block
     def initialize
       @type = :z_block
       @data = [
         [5, 5], [5, 6],
                 [6, 6], [6, 7]
+      ]
+    end
+  end
+
+  class SBlock < Block
+    def initialize
+      @type = :s_block
+      @data = [
+                [5, 6], [5, 7],
+        [6, 5], [6, 6]
+      ]
+    end
+  end
+
+  class TBlock < Block
+    def initialize
+      @type = :t_block
+      @data = [
+                [5, 6],
+        [6, 5], [6, 6], [6, 7]
       ]
     end
   end
