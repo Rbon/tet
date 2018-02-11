@@ -1,4 +1,4 @@
-require 'curses'
+require "curses"
 
 class Main
   def initialize
