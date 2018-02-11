@@ -30,7 +30,7 @@ class Game
     @block_list = [IBlock, OBlock, ZBlock]
     @actions = opts[:actions]
     @state = opts[:state]
-    @state.play_field = Array.new(20) { Array.new(10) { [:empty, false] } }
+    @state.play_field = Array.new(20) { Array.new(10) { :empty } }
     @state.running = true
     @state.flags = [:new_block]
   end
@@ -87,24 +87,10 @@ class State
   end
 end
 
-class Cell
-  def initialize(opts)
-    @pos = opts[:pos]
-  end
-
-  def [](index)
-    @pos[index]
-  end
-
-  def []=(index, value)
-    @pos[index] = value
-  end
-end
-
 module Actions
   class Action
     def update_grid(state, type)
-      state.block.data.each { |cell| state.play_field[cell[0]][cell[1]] = [type, false]}
+      state.block.data.each { |cell| state.play_field[cell[0]][cell[1]] = type}
     end
 
     def collision?(state)
@@ -170,7 +156,7 @@ class IBlock
       [6, 5],
       [7, 5],
       [8, 5]
-    ].map { |pos| Cell.new(pos: pos, type: @type) }
+    ]
   end
 end
 
@@ -193,7 +179,7 @@ class OBlock
     @data = [
       [5, 5], [5, 6],
       [6, 5], [6, 6]
-    ].map { |pos| Cell.new(pos: pos, type: @type) }
+    ]
   end
 end
 
@@ -205,7 +191,7 @@ class ZBlock
     @data = [
       [5, 5], [5, 6],
               [6, 6], [6, 7]
-    ].map { |pos| Cell.new(pos: pos, type: @type) }
+    ]
   end
 end
 
@@ -258,7 +244,7 @@ class Renderer
         y_pos += 1
         @window.setpos(y_pos, 1)
         row.each do |cell|
-          @window.addstr(@type_map[cell[0]])
+          @window.addstr(@type_map[cell])
         end
       end
     end
