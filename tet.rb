@@ -12,7 +12,9 @@ class Main
       play_field: Array.new(20) { Array.new(10) { :empty } },
       actions: {
         move_down: Actions::MoveDown.new, move_left: Actions::MoveLeft.new,
-        move_right: Actions::MoveRight.new, stop: Actions::Stop.new
+        move_right: Actions::MoveRight.new, stop: Actions::Stop.new,
+        rotate_cw: Actions::RotateClockwise.new,
+        rotate_ccw: Actions::RotateCounterClockwise.new
       }
     )
   end
@@ -111,9 +113,9 @@ module Actions
   class Move < Action
     def move(state, axis, delta)
       state.update_grid(:empty)
-      state.block.data.each { |cell| cell[axis] += delta }
+      state.block.pos[axis] += delta
       @collision = state.check_collision
-      state.block.data.each { |cell| cell[axis] -= delta } if @collision
+      state.block.pos[axis] -= delta if @collision
       state.update_grid
     end
   end
@@ -137,6 +139,31 @@ module Actions
     end
   end
 
+  class Rotate
+    def rotate(state, direction)
+      state.update_grid(:empty)
+      state.block.states.rotate!(direction)
+      state.block.data = state.block.states[0]
+      @collision = state.check_collision
+      if @collision
+        state.block.states.rotate!(-(direction))
+        state.block.data = state.block.states[0]
+      end
+      state.update_grid
+    end
+  end
+
+  class RotateClockwise < Rotate
+    def act(state)
+      rotate(state, 1)
+    end
+  end
+
+  class RotateCounterClockwise < Rotate
+    def act(state)
+      rotate(state, -1)
+    end
+  end
 
   class Stop
     def act(state)
@@ -147,80 +174,107 @@ end
 
 module Blocks
   class Block
-    attr_reader :type, :data
+    attr_reader :type
+    attr_accessor :pos, :states
+    attr_writer :data
+
+    def data
+      @data.map { |cell| [cell[0] + @pos[0], cell[1] + @pos[1]] }
+    end
   end
 
   class IBlock < Block
     def initialize
       @type = :i_block
-      @data = [
-        [5, 5],
-        [6, 5],
-        [7, 5],
-        [8, 5]
+      @pos = [3, 3]
+      @states = [
+        [[1, 0], [1, 1], [1, 2], [1, 3]],
+        [[0, 2], [1, 2], [2, 2], [3, 2]],
+        [[2, 0], [2, 1], [2, 2], [2, 3]],
+        [[0, 1], [1, 1], [2, 1], [3, 1]]
       ]
+      @data = @states[0]
     end
   end
 
   class LBlock < Block
     def initialize
       @type = :l_block
-      @data = [
-        [5, 5],
-        [6, 5],
-        [7, 5], [7, 6]
+      @pos = [3, 3]
+      @states = [
+        [[0, 2], [1, 0], [1, 1], [1, 2]],
+        [[0, 1], [1, 1], [2, 1], [2, 2]],
+        [[1, 0], [1, 1], [1, 2], [2, 0]],
+        [[0, 0], [0, 1], [1, 1], [2, 1]]
       ]
+      @data = @states[0]
     end
   end
 
   class JBlock < Block
     def initialize
       @type = :j_block
-      @data = [
-                [5, 6],
-                [6, 6],
-        [7, 5], [7, 6]
+      @pos = [3, 3]
+      @states = [
+       [[0, 0], [1, 0], [1, 1], [1, 2]],
+       [[0, 1], [0, 2], [1, 1], [2, 1]],
+       [[1, 0], [1, 1], [1, 2], [2, 2]],
+       [[0, 1], [1, 1], [2, 0], [2, 1]]
       ]
+      @data = @states[0]
     end
   end
 
   class OBlock < Block
     def initialize
       @type = :o_block
-      @data = [
-        [5, 5], [5, 6],
-        [6, 5], [6, 6]
+      @pos = [3, 3]
+      @states = [
+        [[0, 0], [0, 1], [1, 0], [1, 1]]
       ]
+      @data = @states[0]
     end
   end
 
   class ZBlock < Block
     def initialize
       @type = :z_block
-      @data = [
-        [5, 5], [5, 6],
-                [6, 6], [6, 7]
+      @pos = [3, 3]
+      @states = [
+        [[0, 0], [0, 1], [1, 1], [1, 2]],
+        [[0, 2], [1, 1], [1, 2], [2, 1]],
+        [[1, 0], [1, 1], [2, 1], [2, 2]],
+        [[0, 1], [1, 0], [1, 1], [2, 0]]
       ]
+      @data = @states[0]
     end
   end
 
   class SBlock < Block
     def initialize
       @type = :s_block
-      @data = [
-                [5, 6], [5, 7],
-        [6, 5], [6, 6]
+      @pos = [3, 3]
+      @states = [
+        [[0, 1], [0, 2], [1, 0], [1, 1]],
+        [[0, 1], [1, 1], [1, 2], [2, 2]],
+        [[1, 1], [1, 2], [2, 0], [2, 1]],
+        [[0, 0], [1, 0], [1, 1], [2, 1]]
       ]
+      @data = @states[0]
     end
   end
 
   class TBlock < Block
     def initialize
       @type = :t_block
-      @data = [
-                [5, 6],
-        [6, 5], [6, 6], [6, 7]
+      @pos = [3, 3]
+      @states = [
+       [[0, 1], [1, 0], [1, 1], [1, 2]],
+       [[0, 1], [1, 1], [1, 2], [2, 1]],
+       [[1, 0], [1, 1], [1, 2], [2, 1]],
+       [[0, 1], [1, 0], [1, 1], [2, 1]]
       ]
+      @data = @states[0]
     end
   end
 end
@@ -232,6 +286,8 @@ class Input
       move_left: "h",
       move_right: "l",
       move_down: "j",
+      rotate_cw: "s",
+      rotate_ccw: "a",
       stop: "q"
     }.invert
   end
@@ -288,7 +344,7 @@ end
 
 class Debug
   def initialize
-    @window = Curses::Window.new(30, 30, 0, 30)
+    @window = Curses::Window.new(30, 60, 0, 30)
     @window.setpos(0, 0)
   end
 
