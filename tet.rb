@@ -92,6 +92,7 @@ class State
      return true if cell[1] < 0
      return true if cell[1] > 9
      return true if cell[0] > 19
+     return true if @play_field[cell[0]][cell[1]] != :empty
     end
     return false
   end
